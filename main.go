@@ -14,7 +14,7 @@ func main() {
 
 	for {
 		token := l.Next()
-		fmt.Println(token)
+		fmt.Println(token.String())
 
 		if token.Type == parser.EOF || token.Type == parser.Error {
 			break

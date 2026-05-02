@@ -4,11 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"unicode"
 )
 
 type Lexer struct {
-	input []rune
+	input string
 	pos   int
 }
 
@@ -51,7 +50,7 @@ var tokenNames = map[TokenType]string{
 	RightParen: "RightParen",
 }
 
-var singleRuneTokens = map[rune]TokenType{
+var singleByteTokens = map[byte]TokenType{
 	'+': Plus,
 	'-': Minus,
 	'*': Asterisk,
@@ -77,7 +76,7 @@ func (t *Token) String() string {
 
 func New(expression string) *Lexer {
 	return &Lexer{
-		input: []rune(expression),
+		input: expression,
 	}
 }
 
@@ -91,12 +90,12 @@ func (l *Lexer) Next() Token {
 		}
 	}
 
-	r := l.input[l.pos]
-	if t, ok := singleRuneTokens[r]; ok {
-		return l.singleRuneToken(t)
+	b := l.input[l.pos]
+	if t, ok := singleByteTokens[b]; ok {
+		return l.singleByteToken(t)
 	}
 
-	if unicode.IsDigit(r) {
+	if isDigit(b) {
 		pos := l.pos
 		literal := l.readNumber()
 		value, err := strconv.ParseFloat(literal, 64)
@@ -112,21 +111,21 @@ func (l *Lexer) Next() Token {
 		}
 	}
 
-	tok := l.errorToken(ErrUnknownChar, l.pos, string(l.input[l.pos]))
+	tok := l.errorToken(ErrUnknownChar, l.pos, string(b))
 	l.pos++
 	return tok
 }
 
 func (l *Lexer) errorToken(err error, pos int, literal string) Token {
 	return Token{
-		Type: Error,
+		Type:     Error,
 		Position: pos,
-		Err: err,
-		Literal: literal,
+		Err:      err,
+		Literal:  literal,
 	}
 }
 
-func (l *Lexer) singleRuneToken(t TokenType) Token {
+func (l *Lexer) singleByteToken(t TokenType) Token {
 	tok := Token{Type: t, Position: l.pos, Literal: string(l.input[l.pos])}
 	l.pos++
 	return tok
@@ -134,18 +133,26 @@ func (l *Lexer) singleRuneToken(t TokenType) Token {
 
 func (l *Lexer) readNumber() string {
 	start := l.pos
-	for !l.isEnd() && (unicode.IsDigit(l.input[l.pos]) || l.input[l.pos] == '.') {
+	for !l.isEnd() && (isDigit(l.input[l.pos]) || l.input[l.pos] == '.') {
 		l.pos++
 	}
-	return string(l.input[start:l.pos])
+	return l.input[start:l.pos]
 }
 
 func (l *Lexer) skipWhiteSpace() {
-	for !l.isEnd() && unicode.IsSpace(l.input[l.pos]) {
+	for !l.isEnd() && isSpace(l.input[l.pos]) {
 		l.pos++
 	}
 }
 
 func (l *Lexer) isEnd() bool {
 	return l.pos >= len(l.input)
+}
+
+func isDigit(b byte) bool {
+	return b >= '0' && b <= '9'
+}
+
+func isSpace(b byte) bool {
+	return b == ' ' || b == '\t' || b == '\n' || b == '\r'
 }
