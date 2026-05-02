@@ -1,196 +1,96 @@
 package parser
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
-func (l *Lexer) All() []Token {
+func collectAll(l *Lexer) []Token {
 	tokens := make([]Token, 0, 10)
-
 	for {
 		token := l.Next()
 		tokens = append(tokens, token)
-
 		if token.Type == EOF || token.Type == Error {
 			break
 		}
 	}
-
 	return tokens
 }
 
-func TestHappyPath(t *testing.T) {
-	lexer := New("4.5 * (2~5 + 16) - 32.45 / 3")
-	tokens := lexer.All()
-
-	expect := []Token{
+func TestLexer(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  []Token
+	}{
 		{
-			Type:     Number,
-			Literal:  "4.5",
-			Value:    4.5,
-			Position: 0,
-			Err:      nil,
+			name:  "happy path",
+			input: "4.5 * (2~5 + 16) - 32.45 / 3",
+			want: []Token{
+				{Type: Number, Literal: "4.5", Value: 4.5, Position: 0},
+				{Type: Asterisk, Literal: "*", Position: 4},
+				{Type: LeftParen, Literal: "(", Position: 6},
+				{Type: Number, Literal: "2", Value: 2, Position: 7},
+				{Type: Tilde, Literal: "~", Position: 8},
+				{Type: Number, Literal: "5", Value: 5, Position: 9},
+				{Type: Plus, Literal: "+", Position: 11},
+				{Type: Number, Literal: "16", Value: 16, Position: 13},
+				{Type: RightParen, Literal: ")", Position: 15},
+				{Type: Minus, Literal: "-", Position: 17},
+				{Type: Number, Literal: "32.45", Value: 32.45, Position: 19},
+				{Type: Slash, Literal: "/", Position: 25},
+				{Type: Number, Literal: "3", Value: 3, Position: 27},
+				{Type: EOF, Position: 28},
+			},
 		},
 		{
-			Type:     Asterisk,
-			Literal:  "*",
-			Value:    0,
-			Position: 4,
-			Err:      nil,
+			name:  "empty input",
+			input: "",
+			want: []Token{
+				{Type: EOF, Position: 0},
+			},
 		},
 		{
-			Type:     LeftParen,
-			Literal:  "(",
-			Value:    0,
-			Position: 6,
-			Err:      nil,
+			name:  "space only",
+			input: " \t\r",
+			want: []Token{
+				{Type: EOF, Position: 3},
+			},
 		},
 		{
-			Type:     Number,
-			Literal:  "2",
-			Value:    2,
-			Position: 7,
-			Err:      nil,
+			name:  "new line handling",
+			input: "1\n2",
+			want: []Token{
+				{Type: Number, Literal: "1", Value: 1, Position: 0},
+				{Type: Number, Literal: "2", Value: 2, Position: 2},
+				{Type: EOF, Position: 3},
+			},
 		},
 		{
-			Type:     Tilde,
-			Literal:  "~",
-			Value:    0,
-			Position: 8,
-			Err:      nil,
+			name:  "unknown symbol",
+			input: "4.5 ,",
+			want: []Token{
+				{Type: Number, Literal: "4.5", Value: 4.5, Position: 0},
+				{Type: Error, Literal: ",", Position: 4, Err: ErrUnknownChar},
+			},
 		},
 		{
-			Type:     Number,
-			Literal:  "5",
-			Value:    5,
-			Position: 9,
-			Err:      nil,
-		},
-		{
-			Type:     Plus,
-			Literal:  "+",
-			Value:    0,
-			Position: 11,
-			Err:      nil,
-		},
-		{
-			Type:     Number,
-			Literal:  "16",
-			Value:    16,
-			Position: 13,
-			Err:      nil,
-		},
-		{
-			Type:     RightParen,
-			Literal:  ")",
-			Value:    0,
-			Position: 15,
-			Err:      nil,
-		},
-		{
-			Type:     Minus,
-			Literal:  "-",
-			Value:    0,
-			Position: 17,
-			Err:      nil,
-		},
-		{
-			Type:     Number,
-			Literal:  "32.45",
-			Value:    32.45,
-			Position: 19,
-			Err:      nil,
-		},
-		{
-			Type:     Slash,
-			Literal:  "/",
-			Value:    0,
-			Position: 25,
-			Err:      nil,
-		},
-		{
-			Type:     Number,
-			Literal:  "3",
-			Value:    3,
-			Position: 27,
-			Err:      nil,
-		},
-		{
-			Type:     EOF,
-			Literal:  "",
-			Value:    0,
-			Position: 28,
-			Err:      nil,
+			name:  "wrong number",
+			input: "4.5.3",
+			want: []Token{
+				{Type: Error, Literal: "4.5.3", Position: 0, Err: ErrWrongNumber},
+			},
 		},
 	}
 
-	if !reflect.DeepEqual(expect, tokens) {
-		t.Errorf("\nExpect:\n\t%#v\nGot:\n\t%#v", expect, tokens)
-	}
-}
-
-func TestEmptyInput(t *testing.T) {
-	lexer := New("")
-	tokens := lexer.All()
-
-	expect := []Token{
-		{
-			Type:     EOF,
-			Literal:  "",
-			Value:    0,
-			Position: 0,
-			Err:      nil,
-		},
-	}
-
-	if !reflect.DeepEqual(expect, tokens) {
-		t.Errorf("\nExpect:\n\t%#v\nGot:\n\t%#v", expect, tokens)
-	}
-
-}
-
-func TestUnknownSymbol(t *testing.T) {
-	lexer := New("4.5 ,")
-	tokens := lexer.All()
-
-	expect := []Token{
-		{
-			Type:     Number,
-			Literal:  "4.5",
-			Value:    4.5,
-			Position: 0,
-			Err:      nil,
-		},
-		{
-			Type:     Error,
-			Literal:  ",",
-			Value:    0,
-			Position: 4,
-			Err:      ErrUnknownChar,
-		},
-	}
-
-	if !reflect.DeepEqual(expect, tokens) {
-		t.Errorf("\nExpect:\n\t%#v\nGot:\n\t%#v", expect, tokens)
-	}
-}
-
-func TestWrongNumber(t *testing.T) {
-	lexer := New("4.5.3")
-	tokens := lexer.All()
-
-	expect := []Token{
-		{
-			Type:     Error,
-			Literal:  "4.5.3",
-			Value:    0,
-			Position: 0,
-			Err:      ErrWrongNumber,
-		},
-	}
-
-	if !reflect.DeepEqual(expect, tokens) {
-		t.Errorf("\nExpect:\n\t%#v\nGot:\n\t%#v", expect, tokens)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := collectAll(New(tc.input))
+			if diff := cmp.Diff(tc.want, got, cmpopts.EquateErrors()); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
+			}
+		})
 	}
 }
