@@ -4,14 +4,14 @@ Inspired by [an awesome little article](https://filiph.github.io/unsure/) from F
 
 This is a console notebook-like calculator app for operations over range of numbers. Read the article above for clarification of the original idea and examples of practical usage.
 
-## Usage
+> [!NOTE]
+> The project is at an early stage of development.
 
-You can use this app for quick answers like this:
-
-```sh
-ucal 5~10 * 2
-10~20
-# there is a histogram below
-```
-
-Or you can run it without arguments to get an empty notebook where you can write text and perform calculations.
+Todo:
+- [X] implement lexer
+- [ ] implement parser
+- [ ] evaluate simple expressions
+- [ ] add Monte Carlo simulation for ranges
+- [ ] read files and output evaluated results as plain text
+- [ ] add TUI for editing and viewing files
+- [ ] expose socket for integration with other apps
