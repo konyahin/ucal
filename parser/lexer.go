@@ -74,7 +74,7 @@ func (t *Token) String() string {
 	return fmt.Sprintf("%s[%d] %s", name, t.Position, t.Literal)
 }
 
-func New(expression string) *Lexer {
+func newLexer(expression string) *Lexer {
 	return &Lexer{
 		input: expression,
 	}

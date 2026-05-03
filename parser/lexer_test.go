@@ -87,7 +87,7 @@ func TestLexer(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := collectAll(New(tc.input))
+			got := collectAll(newLexer(tc.input))
 			if diff := cmp.Diff(tc.want, got, cmpopts.EquateErrors()); diff != "" {
 				t.Errorf("mismatch (-want +got):\n%s", diff)
 			}

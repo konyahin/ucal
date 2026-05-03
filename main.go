@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"ucal/parser"
@@ -10,14 +11,17 @@ import (
 
 func main() {
 	expression := strings.Join(os.Args[1:], " ")
-	l := parser.New(expression)
-
-	for {
-		token := l.Next()
-		fmt.Println(token.String())
-
-		if token.Type == parser.EOF || token.Type == parser.Error {
-			break
-		}
+	node, err := parser.New(expression).Parse()
+	if err != nil {
+		fmt.Printf("Got error from parser:\n%s\nfor expression:\n%s\n", err, expression)
+		os.Exit(1)
 	}
+
+	result, err := parser.Eval(node)
+	if err != nil {
+		fmt.Printf("Got error from evaluator:\n%s\nfor expression:\n%s\n", err, expression)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Result: %s\n", strconv.FormatFloat(result, 'f', -1, 64))
 }
