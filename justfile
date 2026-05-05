@@ -1,7 +1,10 @@
 build:
     go build
 
-test args:
+run args="":
+    go run . "{{ args }}"
+
+test args="":
     go test ./... {{ args }}
 
 coverage:

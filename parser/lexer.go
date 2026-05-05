@@ -2,19 +2,18 @@ package parser
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 )
 
-type Lexer struct {
+type lexer struct {
 	input string
 	pos   int
 }
 
-type TokenType int
+type tokenType int
 
 const (
-	EOF TokenType = iota
+	eof tokenType = iota
 	Error
 	Number
 	Plus
@@ -26,31 +25,18 @@ const (
 	RightParen
 )
 
-var ErrWrongNumber = errors.New("Wrong number")
-var ErrUnknownChar = errors.New("Unknown char")
+var errWrongNumber = errors.New("wrong number")
+var errUnknownChar = errors.New("unknown char")
 
-type Token struct {
-	Type     TokenType
-	Literal  string
-	Value    float64
-	Position int
-	Err      error
+type token struct {
+	kind     tokenType
+	literal  string
+	value    float64
+	position int
+	err      error
 }
 
-var tokenNames = map[TokenType]string{
-	EOF:        "EOF",
-	Error:      "Error",
-	Number:     "Number",
-	Plus:       "Plus",
-	Minus:      "Minus",
-	Asterisk:   "Asterisk",
-	Slash:      "Slash",
-	Tilde:      "Tilde",
-	LeftParen:  "LeftParen",
-	RightParen: "RightParen",
-}
-
-var singleByteTokens = map[byte]TokenType{
+var singleByteTokens = map[byte]tokenType{
 	'+': Plus,
 	'-': Minus,
 	'*': Asterisk,
@@ -60,33 +46,19 @@ var singleByteTokens = map[byte]TokenType{
 	')': RightParen,
 }
 
-func (t *Token) String() string {
-	name, ok := tokenNames[t.Type]
-	if !ok {
-		name = "Unknown"
-	}
-	if t.Type == Number {
-		return fmt.Sprintf("%s[%d] %s", name, t.Position, strconv.FormatFloat(t.Value, 'f', -1, 64))
-	}
-	if t.Type == Error {
-		return fmt.Sprintf("%s[%d] %s: %s", name, t.Position, t.Err, t.Literal)
-	}
-	return fmt.Sprintf("%s[%d] %s", name, t.Position, t.Literal)
-}
-
-func newLexer(expression string) *Lexer {
-	return &Lexer{
+func newLexer(expression string) lexer {
+	return lexer{
 		input: expression,
 	}
 }
 
-func (l *Lexer) Next() Token {
+func (l *lexer) next() token {
 	l.skipWhiteSpace()
 
 	if l.isEnd() {
-		return Token{
-			Type:     EOF,
-			Position: len(l.input),
+		return token{
+			kind:     eof,
+			position: len(l.input),
 		}
 	}
 
@@ -100,38 +72,38 @@ func (l *Lexer) Next() Token {
 		literal := l.readNumber()
 		value, err := strconv.ParseFloat(literal, 64)
 		if err != nil {
-			return l.errorToken(ErrWrongNumber, pos, literal)
+			return l.errorToken(errWrongNumber, pos, literal)
 		}
 
-		return Token{
-			Type:     Number,
-			Position: pos,
-			Value:    value,
-			Literal:  literal,
+		return token{
+			kind:     Number,
+			position: pos,
+			value:    value,
+			literal:  literal,
 		}
 	}
 
-	tok := l.errorToken(ErrUnknownChar, l.pos, string(b))
+	tok := l.errorToken(errUnknownChar, l.pos, string(b))
 	l.pos++
 	return tok
 }
 
-func (l *Lexer) errorToken(err error, pos int, literal string) Token {
-	return Token{
-		Type:     Error,
-		Position: pos,
-		Err:      err,
-		Literal:  literal,
+func (l *lexer) errorToken(err error, pos int, literal string) token {
+	return token{
+		kind:     Error,
+		position: pos,
+		err:      err,
+		literal:  literal,
 	}
 }
 
-func (l *Lexer) singleByteToken(t TokenType) Token {
-	tok := Token{Type: t, Position: l.pos, Literal: string(l.input[l.pos])}
+func (l *lexer) singleByteToken(t tokenType) token {
+	tok := token{kind: t, position: l.pos, literal: string(l.input[l.pos])}
 	l.pos++
 	return tok
 }
 
-func (l *Lexer) readNumber() string {
+func (l *lexer) readNumber() string {
 	start := l.pos
 	for !l.isEnd() && (isDigit(l.input[l.pos]) || l.input[l.pos] == '.') {
 		l.pos++
@@ -139,13 +111,13 @@ func (l *Lexer) readNumber() string {
 	return l.input[start:l.pos]
 }
 
-func (l *Lexer) skipWhiteSpace() {
+func (l *lexer) skipWhiteSpace() {
 	for !l.isEnd() && isSpace(l.input[l.pos]) {
 		l.pos++
 	}
 }
 
-func (l *Lexer) isEnd() bool {
+func (l *lexer) isEnd() bool {
 	return l.pos >= len(l.input)
 }
 

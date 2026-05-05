@@ -7,12 +7,12 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
-func collectAll(l *Lexer) []Token {
-	tokens := make([]Token, 0, 10)
+func collectAll(l lexer) []token {
+	tokens := make([]token, 0, 10)
 	for {
-		token := l.Next()
-		tokens = append(tokens, token)
-		if token.Type == EOF || token.Type == Error {
+		tok := l.next()
+		tokens = append(tokens, tok)
+		if tok.kind == eof || tok.kind == Error {
 			break
 		}
 	}
@@ -23,64 +23,64 @@ func TestLexer(t *testing.T) {
 	tests := []struct {
 		name  string
 		input string
-		want  []Token
+		want  []token
 	}{
 		{
 			name:  "happy path",
 			input: "4.5 * (2~5 + 16) - 32.45 / 3",
-			want: []Token{
-				{Type: Number, Literal: "4.5", Value: 4.5, Position: 0},
-				{Type: Asterisk, Literal: "*", Position: 4},
-				{Type: LeftParen, Literal: "(", Position: 6},
-				{Type: Number, Literal: "2", Value: 2, Position: 7},
-				{Type: Tilde, Literal: "~", Position: 8},
-				{Type: Number, Literal: "5", Value: 5, Position: 9},
-				{Type: Plus, Literal: "+", Position: 11},
-				{Type: Number, Literal: "16", Value: 16, Position: 13},
-				{Type: RightParen, Literal: ")", Position: 15},
-				{Type: Minus, Literal: "-", Position: 17},
-				{Type: Number, Literal: "32.45", Value: 32.45, Position: 19},
-				{Type: Slash, Literal: "/", Position: 25},
-				{Type: Number, Literal: "3", Value: 3, Position: 27},
-				{Type: EOF, Position: 28},
+			want: []token{
+				{kind: Number, literal: "4.5", value: 4.5, position: 0},
+				{kind: Asterisk, literal: "*", position: 4},
+				{kind: LeftParen, literal: "(", position: 6},
+				{kind: Number, literal: "2", value: 2, position: 7},
+				{kind: Tilde, literal: "~", position: 8},
+				{kind: Number, literal: "5", value: 5, position: 9},
+				{kind: Plus, literal: "+", position: 11},
+				{kind: Number, literal: "16", value: 16, position: 13},
+				{kind: RightParen, literal: ")", position: 15},
+				{kind: Minus, literal: "-", position: 17},
+				{kind: Number, literal: "32.45", value: 32.45, position: 19},
+				{kind: Slash, literal: "/", position: 25},
+				{kind: Number, literal: "3", value: 3, position: 27},
+				{kind: eof, position: 28},
 			},
 		},
 		{
 			name:  "empty input",
 			input: "",
-			want: []Token{
-				{Type: EOF, Position: 0},
+			want: []token{
+				{kind: eof, position: 0},
 			},
 		},
 		{
 			name:  "space only",
 			input: " \t\r",
-			want: []Token{
-				{Type: EOF, Position: 3},
+			want: []token{
+				{kind: eof, position: 3},
 			},
 		},
 		{
 			name:  "new line handling",
 			input: "1\n2",
-			want: []Token{
-				{Type: Number, Literal: "1", Value: 1, Position: 0},
-				{Type: Number, Literal: "2", Value: 2, Position: 2},
-				{Type: EOF, Position: 3},
+			want: []token{
+				{kind: Number, literal: "1", value: 1, position: 0},
+				{kind: Number, literal: "2", value: 2, position: 2},
+				{kind: eof, position: 3},
 			},
 		},
 		{
 			name:  "unknown symbol",
 			input: "4.5 ,",
-			want: []Token{
-				{Type: Number, Literal: "4.5", Value: 4.5, Position: 0},
-				{Type: Error, Literal: ",", Position: 4, Err: ErrUnknownChar},
+			want: []token{
+				{kind: Number, literal: "4.5", value: 4.5, position: 0},
+				{kind: Error, literal: ",", position: 4, err: errUnknownChar},
 			},
 		},
 		{
 			name:  "wrong number",
 			input: "4.5.3",
-			want: []Token{
-				{Type: Error, Literal: "4.5.3", Position: 0, Err: ErrWrongNumber},
+			want: []token{
+				{kind: Error, literal: "4.5.3", position: 0, err: errWrongNumber},
 			},
 		},
 	}
@@ -88,7 +88,7 @@ func TestLexer(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			got := collectAll(newLexer(tc.input))
-			if diff := cmp.Diff(tc.want, got, cmpopts.EquateErrors()); diff != "" {
+			if diff := cmp.Diff(tc.want, got, cmpopts.EquateErrors(), cmp.AllowUnexported(token{})); diff != "" {
 				t.Errorf("mismatch (-want +got):\n%s", diff)
 			}
 		})
