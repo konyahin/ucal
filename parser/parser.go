@@ -17,7 +17,7 @@ type numberNode struct {
 }
 
 type binaryOperationNode struct {
-	operation tokenType
+	operation token
 	left      Node
 	right     Node
 }
@@ -32,7 +32,7 @@ func (n *numberNode) position() int {
 }
 
 func (n *binaryOperationNode) position() int {
-	return n.left.position()
+	return n.operation.position
 }
 
 func (n *unaryMinusNode) position() int {
@@ -73,24 +73,48 @@ func (p *Parser) parseAddSub() (Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		left = &binaryOperationNode{operation: op.kind, left: left, right: right}
+		left = &binaryOperationNode{op, left, right}
 	}
 	return left, nil
 }
 
 func (p *Parser) parseMulDiv() (Node, error) {
-	left, err := p.parseAtom()
+	left, err := p.parseRange()
 	if err != nil {
 		return nil, err
 	}
 	for p.is(Asterisk) || p.is(Slash) {
 		op := p.current
 		p.advance()
+		right, err := p.parseRange()
+		if err != nil {
+			return nil, err
+		}
+		left = &binaryOperationNode{op, left, right}
+	}
+	return left, nil
+}
+
+func (p *Parser) parseRange() (Node, error) {
+	left, err := p.parseAtom()
+	if err != nil {
+		return nil, err
+	}
+	if p.is(Tilde) {
+		op := p.current
+		p.advance()
+
 		right, err := p.parseAtom()
 		if err != nil {
 			return nil, err
 		}
-		left = &binaryOperationNode{operation: op.kind, left: left, right: right}
+		for _, n := range []Node{left, right} {
+			tilde := findOperation(n, Tilde)
+			if tilde != nil {
+				return nil, fmt.Errorf("range cannot contain another range at position %d", tilde.position)
+			}
+		}
+		return &binaryOperationNode{op, left, right}, nil
 	}
 	return left, nil
 }
@@ -129,4 +153,25 @@ func (p *Parser) parseAtom() (Node, error) {
 
 func (p *Parser) is(t tokenType) bool {
 	return p.current.kind == t
+}
+
+func findOperation(node Node, operation tokenType) *token {
+	switch n := node.(type) {
+	case *numberNode:
+		return nil
+	case *unaryMinusNode:
+		return findOperation(n.value, operation)
+	case *binaryOperationNode:
+		if n.operation.kind == operation {
+			return &n.operation
+		}
+		op := findOperation(n.left, operation)
+		if op != nil {
+			return op
+		}
+		return findOperation(n.right, operation)
+
+	default:
+		panic(fmt.Sprintf("unknown node type: %T", node))
+	}
 }

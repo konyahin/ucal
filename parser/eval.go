@@ -26,7 +26,7 @@ func Eval(node Node) (float64, error) {
 		if err != nil {
 			return 0, err
 		}
-		switch n.operation {
+		switch n.operation.kind {
 		case Plus:
 			return left + right, nil
 		case Minus:
@@ -38,6 +38,9 @@ func Eval(node Node) (float64, error) {
 				return 0, errDivisionByZero
 			}
 			return left / right, nil
+		case Tilde:
+			// todo make real range calculation
+			return (left + right) / 2, nil
 		default:
 			panic(fmt.Sprintf("unknown binary operation: %v", n.operation))
 		}
