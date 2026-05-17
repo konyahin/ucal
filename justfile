@@ -7,6 +7,13 @@ run args="":
 test args="":
     go test ./... {{ args }}
 
+benchmark:
+    go test -run='^$' -bench=. -count=10 ./... > benchmark.txt
+    cat benchmark.txt
+
+benchstat: benchmark
+    benchstat benchmark.txt
+
 coverage:
     go test -cover ./...
 

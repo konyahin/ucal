@@ -4,6 +4,8 @@ import (
 	"math/rand/v2"
 	"slices"
 	"sync"
+
+	"github.com/caio/go-tdigest/v5"
 )
 
 func run(size int, rng *rand.Rand, f func(rng *rand.Rand) float64) []float64 {
@@ -16,21 +18,39 @@ func run(size int, rng *rand.Rand, f func(rng *rand.Rand) float64) []float64 {
 	return results
 }
 
-func parallelRun(times, size int, rngf func() *rand.Rand, f func(rng *rand.Rand) float64) []float64 {
-	results := make([]float64, size*times)
+func parallelRun(times, size int, rngf func() *rand.Rand, f func(rng *rand.Rand) float64) (*tdigest.TDigest, error) {
+	digests := make([]*tdigest.TDigest, times)
 	var wg sync.WaitGroup
 
 	for i := range times {
+		d, err := tdigest.New()
+		if err != nil {
+			return nil, err
+		}
+
+		digests[i] = d
 		rng := rngf()
-		start := i * size
 		wg.Go(func() {
-			for j := range size {
-				results[start+j] = f(rng)
+			for range size {
+				err := d.Add(f(rng))
+				if err != nil {
+					panic(err)
+				}
 			}
 		})
 	}
 
 	wg.Wait()
-	slices.Sort(results)
-	return results
+
+	final, err := tdigest.New()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, d := range digests {
+		if err := final.Merge(d); err != nil {
+			return nil, err
+		}
+	}
+	return final, nil
 }

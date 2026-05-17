@@ -7,5 +7,5 @@ func floatEqual(a, b float64) bool {
 }
 
 func closeEnough(a, b float64) bool {
-	return math.Abs(a-b) <= 0.5
+	return math.Abs(a-b) <= 0.1
 }
