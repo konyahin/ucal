@@ -3,7 +3,8 @@ package montecarlo
 import (
 	"math/rand/v2"
 	"slices"
-	"sync"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/caio/go-tdigest/v5"
 )
@@ -20,7 +21,7 @@ func run(size int, rng *rand.Rand, f func(rng *rand.Rand) float64) []float64 {
 
 func parallelRun(times, size int, rngf func() *rand.Rand, f func(rng *rand.Rand) float64) (*tdigest.TDigest, error) {
 	digests := make([]*tdigest.TDigest, times)
-	var wg sync.WaitGroup
+	var wg errgroup.Group
 
 	for i := range times {
 		d, err := tdigest.New()
@@ -30,17 +31,20 @@ func parallelRun(times, size int, rngf func() *rand.Rand, f func(rng *rand.Rand)
 
 		digests[i] = d
 		rng := rngf()
-		wg.Go(func() {
+		wg.Go(func() error {
 			for range size {
 				err := d.Add(f(rng))
 				if err != nil {
-					panic(err)
+					return err
 				}
 			}
+			return nil
 		})
 	}
 
-	wg.Wait()
+	if err := wg.Wait(); err != nil {
+		return nil, err
+	}
 
 	final, err := tdigest.New()
 	if err != nil {
