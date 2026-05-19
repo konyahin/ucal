@@ -1,9 +1,14 @@
-package montecarlo
+package distribution
 
 import (
 	"fmt"
+	"math"
 	"testing"
 )
+
+func floatEqual(a, b float64) bool {
+	return math.Abs(a-b) <= 1e-9
+}
 
 func TestNormalDistribution(t *testing.T) {
 	tests := []struct {
@@ -18,7 +23,7 @@ func TestNormalDistribution(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("from %v to %v", test.from, test.to), func(t *testing.T) {
-			distr := newNormalDistribution(test.from, test.to)
+			distr := NewNormal(test.from, test.to)
 
 			if !floatEqual(distr.mu, test.mu) {
 				t.Fatalf("mu should be '%v', but we got '%v'", test.mu, distr.mu)

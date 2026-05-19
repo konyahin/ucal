@@ -1,4 +1,4 @@
-package montecarlo
+package distribution
 
 import (
 	"math/rand/v2"
@@ -8,19 +8,19 @@ import (
 // used to construct a symmetric 95% confidence interval
 const z975 = 1.96
 
-type normalDistribution struct {
+type Normal struct {
 	mu    float64
 	sigma float64
 }
 
 // 95% confidence interval assumed for [from, to]
-func newNormalDistribution(from, to float64) normalDistribution {
-	return normalDistribution{
+func NewNormal(from, to float64) Normal {
+	return Normal{
 		mu:    (from + to) / 2,
 		sigma: (to - from) / (z975 * 2),
 	}
 }
 
-func (n normalDistribution) sample(r *rand.Rand) float64 {
+func (n Normal) Sample(r *rand.Rand) float64 {
 	return n.mu + n.sigma*r.NormFloat64()
 }

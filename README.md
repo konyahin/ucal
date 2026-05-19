@@ -12,6 +12,4 @@ Todo:
 - [X] implement parser
 - [X] evaluate simple expressions
 - [ ] add Monte Carlo simulation for ranges
-- [ ] read files and output evaluated results as plain text
-- [ ] add TUI for editing and viewing files
 - [ ] expose socket for integration with other apps

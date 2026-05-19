@@ -2,15 +2,12 @@ package montecarlo
 
 import (
 	"fmt"
+	"math"
 	"math/rand/v2"
 	"testing"
+
+	"ucal/distribution"
 )
-
-const size = 500_000
-const times = 2
-
-const benchmarkSize = 1_000_000
-const benchmarkTimes = 10
 
 var tests = []struct {
 	percentile float64
@@ -30,32 +27,13 @@ var tests = []struct {
 }
 
 func TestMonteCarlo(t *testing.T) {
-	distr := newNormalDistribution(4, 6)
-	results := run(times*size, rand.New(rand.NewPCG(1, 2)), func(r *rand.Rand) float64 {
-		return 100 / distr.sample(r)
-	})
-
-	for _, test := range tests {
-		t.Run(fmt.Sprintf("%v percentile", test.percentile), func(t *testing.T) {
-			idx := int(times * size * test.percentile / 100)
-			if !closeEnough(results[idx], test.need) {
-				t.Fatalf("%v percentile should be '%v', but we got '%v'", test.percentile, test.need, results[idx])
-			}
-		})
-	}
-}
-
-func TestMonteCarloParallel(t *testing.T) {
-	seed := uint64(0)
-	rngf := func() *rand.Rand {
-		seed += 1
-		return rand.New(rand.NewPCG(seed, seed+1))
+	distr := distribution.NewNormal(4, 6)
+	f := func(r *rand.Rand) float64 {
+		return 100 / distr.Sample(r)
 	}
 
-	distr := newNormalDistribution(4, 6)
-	digest, err := parallelRun(times, size, rngf, func(r *rand.Rand) float64 {
-		return 100 / distr.sample(r)
-	})
+	mc := New(f)
+	results, err := mc.Run()
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -63,7 +41,7 @@ func TestMonteCarloParallel(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%v percentile", test.percentile), func(t *testing.T) {
-			result := digest.Quantile(test.percentile / 100)
+			result := results.Percentile(test.percentile)
 			if !closeEnough(result, test.need) {
 				t.Fatalf("%v percentile should be '%v', but we got '%v'", test.percentile, test.need, result)
 			}
@@ -71,21 +49,15 @@ func TestMonteCarloParallel(t *testing.T) {
 	}
 }
 
-func BenchmarkSequential(b *testing.B) {
-	distr := newNormalDistribution(4, 6)
-	rng := rand.New(rand.NewPCG(1, 2))
-	f := func(r *rand.Rand) float64 { return 100 / distr.sample(r) }
+func BenchmarkMonteCarlo(b *testing.B) {
+	distr := distribution.NewNormal(4, 6)
+	f := func(r *rand.Rand) float64 { return 100 / distr.Sample(r) }
+	mc := New(f)
 	for b.Loop() {
-		run(benchmarkTimes*benchmarkSize, rng, f)
+		_, _ = mc.Run()
 	}
 }
 
-func BenchmarkParallel(b *testing.B) {
-	distr := newNormalDistribution(4, 6)
-	seed := uint64(0)
-	rngf := func() *rand.Rand { seed++; return rand.New(rand.NewPCG(seed, 0)) }
-	f := func(r *rand.Rand) float64 { return 100 / distr.sample(r) }
-	for b.Loop() {
-		parallelRun(benchmarkTimes, benchmarkSize, rngf, f)
-	}
+func closeEnough(a, b float64) bool {
+	return math.Abs(a-b) <= 0.1
 }

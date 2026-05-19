@@ -2,24 +2,37 @@ package montecarlo
 
 import (
 	"math/rand/v2"
-	"slices"
 
 	"golang.org/x/sync/errgroup"
 
 	"github.com/caio/go-tdigest/v5"
 )
 
-func run(size int, rng *rand.Rand, f func(rng *rand.Rand) float64) []float64 {
-	results := make([]float64, size)
-	for i := range size {
-		results[i] = f(rng)
-	}
+const (
+	defaultSize = 400_000
+	defaultStep = 50_000
+)
 
-	slices.Sort(results)
-	return results
+type Simulation struct {
+	size int
+	f    func(*rand.Rand) float64
 }
 
-func parallelRun(times, size int, rngf func() *rand.Rand, f func(rng *rand.Rand) float64) (*tdigest.TDigest, error) {
+type Result struct {
+	digest *tdigest.TDigest
+}
+
+func New(f func(*rand.Rand) float64) *Simulation {
+	return &Simulation{
+		size: defaultSize,
+		f:    f,
+	}
+}
+
+func (s *Simulation) Run() (*Result, error) {
+	step := min(s.size, defaultStep)
+	times := s.size / step
+
 	digests := make([]*tdigest.TDigest, times)
 	var wg errgroup.Group
 
@@ -30,10 +43,10 @@ func parallelRun(times, size int, rngf func() *rand.Rand, f func(rng *rand.Rand)
 		}
 
 		digests[i] = d
-		rng := rngf()
+		rng := rngFactory()
 		wg.Go(func() error {
-			for range size {
-				err := d.Add(f(rng))
+			for range step {
+				err := d.Add(s.f(rng))
 				if err != nil {
 					return err
 				}
@@ -56,5 +69,16 @@ func parallelRun(times, size int, rngf func() *rand.Rand, f func(rng *rand.Rand)
 			return nil, err
 		}
 	}
-	return final, nil
+
+	return &Result{digest: final}, nil
+}
+
+// Percentile returns the value at the p-th percentile of the simulated
+// distribution, where p is in [0, 100].
+func (r *Result) Percentile(p float64) float64 {
+	return r.digest.Quantile(p / 100)
+}
+
+func rngFactory() *rand.Rand {
+	return rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))
 }
