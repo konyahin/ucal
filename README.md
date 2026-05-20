@@ -11,5 +11,5 @@ Todo:
 - [X] implement lexer
 - [X] implement parser
 - [X] evaluate simple expressions
-- [ ] add Monte Carlo simulation for ranges
+- [X] add Monte Carlo simulation for ranges
 - [ ] expose socket for integration with other apps

@@ -15,14 +15,14 @@ const (
 
 type Simulation struct {
 	size int
-	f    func(*rand.Rand) float64
+	f    func(*rand.Rand) (float64, error)
 }
 
 type Result struct {
 	digest *tdigest.TDigest
 }
 
-func New(f func(*rand.Rand) float64) *Simulation {
+func New(f func(*rand.Rand) (float64, error)) *Simulation {
 	return &Simulation{
 		size: defaultSize,
 		f:    f,
@@ -46,7 +46,12 @@ func (s *Simulation) Run() (*Result, error) {
 		rng := rngFactory()
 		wg.Go(func() error {
 			for range step {
-				err := d.Add(s.f(rng))
+				value, err := s.f(rng)
+				if err != nil {
+					return err
+				}
+
+				err = d.Add(value)
 				if err != nil {
 					return err
 				}

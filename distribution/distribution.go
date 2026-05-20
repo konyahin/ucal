@@ -8,19 +8,6 @@ import (
 // used to construct a symmetric 95% confidence interval
 const z975 = 1.96
 
-type Normal struct {
-	mu    float64
-	sigma float64
-}
-
-// 95% confidence interval assumed for [from, to]
-func NewNormal(from, to float64) Normal {
-	return Normal{
-		mu:    (from + to) / 2,
-		sigma: (to - from) / (z975 * 2),
-	}
-}
-
-func (n Normal) Sample(r *rand.Rand) float64 {
-	return n.mu + n.sigma*r.NormFloat64()
+func Normal(from, to float64, r *rand.Rand) float64 {
+	return (from+to)/2 + (to-from)/(z975*2)*r.NormFloat64()
 }

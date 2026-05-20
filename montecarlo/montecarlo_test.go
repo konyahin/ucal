@@ -27,9 +27,8 @@ var tests = []struct {
 }
 
 func TestMonteCarlo(t *testing.T) {
-	distr := distribution.NewNormal(4, 6)
-	f := func(r *rand.Rand) float64 {
-		return 100 / distr.Sample(r)
+	f := func(r *rand.Rand) (float64, error) {
+		return 100 / distribution.Normal(4, 6, r), nil
 	}
 
 	mc := New(f)
@@ -50,8 +49,9 @@ func TestMonteCarlo(t *testing.T) {
 }
 
 func BenchmarkMonteCarlo(b *testing.B) {
-	distr := distribution.NewNormal(4, 6)
-	f := func(r *rand.Rand) float64 { return 100 / distr.Sample(r) }
+	f := func(r *rand.Rand) (float64, error) {
+		return 100 / distribution.Normal(4, 6, r), nil
+	}
 	mc := New(f)
 	for b.Loop() {
 		_, _ = mc.Run()
