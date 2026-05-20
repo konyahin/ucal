@@ -14,11 +14,20 @@ type evaluationResult float64
 
 type Result interface {
 	Percentile(percentile float64) float64
+	CDF(x float64) float64
 }
 
 // deterministic value — same for every percentile
 func (value evaluationResult) Percentile(_ float64) float64 {
 	return float64(value)
+}
+
+// 0 below the value, 1 at or above it
+func (value evaluationResult) CDF(x float64) float64 {
+	if x < float64(value) {
+		return 0
+	}
+	return 1
 }
 
 func Eval(node Node) (Result, error) {

@@ -84,6 +84,11 @@ func (r *Result) Percentile(p float64) float64 {
 	return r.digest.Quantile(p / 100)
 }
 
+// CDF returns the fraction of samples less than or equal to x, in [0, 1].
+func (r *Result) CDF(x float64) float64 {
+	return r.digest.CDF(x)
+}
+
 func rngFactory() *rand.Rand {
 	return rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))
 }
