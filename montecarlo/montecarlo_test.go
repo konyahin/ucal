@@ -1,6 +1,7 @@
 package montecarlo
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"math/rand/v2"
@@ -32,7 +33,7 @@ func TestMonteCarlo(t *testing.T) {
 	}
 
 	mc := New(f)
-	results, err := mc.Run()
+	results, err := mc.Run(context.Background())
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -54,7 +55,7 @@ func BenchmarkMonteCarlo(b *testing.B) {
 	}
 	mc := New(f)
 	for b.Loop() {
-		_, _ = mc.Run()
+		_, _ = mc.Run(context.Background())
 	}
 }
 

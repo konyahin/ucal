@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/rand/v2"
@@ -30,7 +31,7 @@ func (value evaluationResult) CDF(x float64) float64 {
 	return 1
 }
 
-func Eval(node Node) (Result, error) {
+func Eval(ctx context.Context, node Node) (Result, error) {
 	tilde := findOperation(node, Tilde)
 	if tilde == nil {
 		res, err := evaluate(node, nil)
@@ -42,7 +43,7 @@ func Eval(node Node) (Result, error) {
 	mc := montecarlo.New(func(r *rand.Rand) (float64, error) {
 		return evaluate(node, r)
 	})
-	return mc.Run()
+	return mc.Run(ctx)
 }
 
 func evaluate(node Node, r *rand.Rand) (float64, error) {

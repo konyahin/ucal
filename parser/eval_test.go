@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"math"
 	"testing"
 )
@@ -33,7 +34,7 @@ func TestEval(t *testing.T) {
 
 			var result Result
 			if err == nil {
-				result, err = Eval(node)
+				result, err = Eval(context.Background(), node)
 			}
 
 			errGot := ""

@@ -1,6 +1,7 @@
 package montecarlo
 
 import (
+	"context"
 	"math/rand/v2"
 
 	"golang.org/x/sync/errgroup"
@@ -29,23 +30,29 @@ func New(f func(*rand.Rand) (float64, error)) *Simulation {
 	}
 }
 
-func (s *Simulation) Run() (*Result, error) {
+func (s *Simulation) Run(ctx context.Context) (*Result, error) {
 	step := min(s.size, defaultStep)
 	times := s.size / step
 
 	digests := make([]*tdigest.TDigest, times)
-	var wg errgroup.Group
+	wg, ctx := errgroup.WithContext(ctx)
 
 	for i := range times {
 		d, err := tdigest.New()
 		if err != nil {
 			return nil, err
 		}
-
 		digests[i] = d
+	}
+
+	for _, d := range digests {
 		rng := rngFactory()
 		wg.Go(func() error {
 			for range step {
+				if err := ctx.Err(); err != nil {
+					return err
+				}
+
 				value, err := s.f(rng)
 				if err != nil {
 					return err

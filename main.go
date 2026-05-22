@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"os"
@@ -22,7 +23,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	result, err := parser.Eval(node)
+	result, err := parser.Eval(context.Background(), node)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Got error from evaluator:\n%s\n", err)
 		os.Exit(1)
