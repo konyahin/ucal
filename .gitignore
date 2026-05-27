@@ -1,3 +1,7 @@
 ucal
 coverage.out
 benchmark.txt
+.DS_Store
+node_modules
+vscode-plugin/out
+*.vsix
