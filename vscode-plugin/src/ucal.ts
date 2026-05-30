@@ -9,14 +9,16 @@ import {
     StreamMessageWriter,
 } from 'vscode-jsonrpc/node';
 
+export type UcalExpression = { line: number; text: string };
 export interface EvaluateResult { low: number; high: number; }
 interface EvaluateParams { expression: string; }
 const Evaluate = new RequestType<EvaluateParams, EvaluateResult, void>('evaluate');
 
+export const output = vscode.window.createOutputChannel('ucal');
+
 let context: vscode.ExtensionContext;
 let proc: ChildProcess;
 let conn: MessageConnection;
-let output: vscode.OutputChannel;
 
 function getConnection(): MessageConnection {
     if (conn) {
@@ -46,8 +48,6 @@ function getConnection(): MessageConnection {
 
 export function openConnection(ctxt: vscode.ExtensionContext) {
     context = ctxt;
-
-    output = vscode.window.createOutputChannel('ucal');
     context.subscriptions.push(output);
 }
 

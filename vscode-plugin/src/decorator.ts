@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import MarkdownIt from 'markdown-it';
-import { calculate } from './ucal';
+import { findUcalLines } from './markdown';
+import { calculate, output } from './ucal';
 
 type State = {
     timer?: NodeJS.Timeout;
@@ -8,11 +8,6 @@ type State = {
 };
 
 type LineDecoration = { line: number; ok: boolean; text: string };
-
-const states = new Map<string, State>();
-
-const DEBOUNCE_MS = 300;
-const md = new MarkdownIt();
 
 const resultType = vscode.window.createTextEditorDecorationType({
     after: {
@@ -27,6 +22,10 @@ const errorType = vscode.window.createTextEditorDecorationType({
         margin: '0 0 0 1rem',
     },
 });
+
+const states = new Map<string, State>();
+
+const DEBOUNCE_MS = 300;
 
 function getState(uri: vscode.Uri): State {
     const key = uri.toString();
@@ -61,71 +60,26 @@ function scheduleUpdate(doc: vscode.TextDocument): void {
     state.timer = setTimeout(() => {
         state.timer = undefined;
         state.source = new vscode.CancellationTokenSource();
-        void updateDecorations(doc, state.source.token);
+
+        runUpdate(doc, state.source).catch(err => {
+            output.appendLine(`Error updating ucal decorations: ${err instanceof Error ? err.message : String(err)}`);
+        });
     }, DEBOUNCE_MS);
 }
 
-function isSkippable(line: string): boolean {
-    const trimmed = line.trim();
-    return trimmed === '' || trimmed.startsWith('#') || trimmed.startsWith('//');
-}
-
-async function evaluateLine(
-    line: number,
-    expression: string,
-    token: vscode.CancellationToken,
-): Promise<LineDecoration | null> {
-    try {
-        const res = await calculate(expression, token);
-        return {
-            line,
-            ok: true,
-            text: `= ${res.low.toFixed(2)} ~ ${res.high.toFixed(2)}`,
-        };
-    } catch (err) {
-        if (token.isCancellationRequested) {
-            return null;
-        }
-        const msg = err instanceof Error ? err.message : String(err);
-        return { line, ok: false, text: `error: ${msg}` };
-    }
-}
-
-async function updateDecorations(
-    doc: vscode.TextDocument,
-    token: vscode.CancellationToken,
-): Promise<void> {
+async function runUpdate(doc: vscode.TextDocument, source: vscode.CancellationTokenSource): Promise<void> {
     const docVersion = doc.version;
-    const tokens = md.parse(doc.getText(), {});
+    const expressions = findUcalLines(doc);
 
-    const pending: Promise<LineDecoration | null>[] = [];
-
-    for (const t of tokens) {
-        if (t.type !== 'fence' || !t.map) {
-            continue;
-        }
-        const lang = t.info.trim().split(/\s+/)[0];
-        if (lang !== 'ucal') {
-            continue;
-        }
-        const [start, end] = t.map;
-        for (let i = start + 1; i < end - 1; i++) {
-            if (i >= doc.lineCount) {
-                break;
-            }
-            const line = doc.lineAt(i).text;
-            if (isSkippable(line)) {
-                continue;
-            }
-            pending.push(evaluateLine(i, line.trim(), token));
-        }
-    }
-
+    const pending = expressions.map(e => evaluateLine(e.line, e.text, source.token));
     const results = await Promise.all(pending);
-    if (token.isCancellationRequested || doc.version !== docVersion) {
+    if (source.token.isCancellationRequested || doc.version !== docVersion) {
         return;
     }
+    showDecorations(doc, results);
+}
 
+function showDecorations(doc: vscode.TextDocument, results: (LineDecoration | null)[]): void {
     const okOptions: vscode.DecorationOptions[] = [];
     const errOptions: vscode.DecorationOptions[] = [];
 
@@ -151,6 +105,27 @@ async function updateDecorations(
         }
         editor.setDecorations(resultType, okOptions);
         editor.setDecorations(errorType, errOptions);
+    }
+}
+
+export async function evaluateLine(
+    line: number,
+    expression: string,
+    token: vscode.CancellationToken,
+): Promise<LineDecoration | null> {
+    try {
+        const res = await calculate(expression, token);
+        return {
+            line,
+            ok: true,
+            text: `= ${res.low.toFixed(2)} ~ ${res.high.toFixed(2)}`,
+        };
+    } catch (err) {
+        if (token.isCancellationRequested) {
+            return null;
+        }
+        const msg = err instanceof Error ? err.message : String(err);
+        return { line, ok: false, text: `error: ${msg}` };
     }
 }
 
