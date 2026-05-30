@@ -25,6 +25,10 @@ check:
     go vet
     staticcheck
 
+clean:
+    rm -rf dist vscode-plugin/out
+    rm -f ucal benchmark.txt coverage.out vscode-plugin/ucal-*.vsix
+
 release version:
     rm -rf dist
     mkdir -p dist
