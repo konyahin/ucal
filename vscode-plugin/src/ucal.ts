@@ -9,7 +9,6 @@ import {
     StreamMessageWriter,
 } from 'vscode-jsonrpc/node';
 
-
 export interface EvaluateResult { low: number; high: number; }
 interface EvaluateParams { expression: string; }
 const Evaluate = new RequestType<EvaluateParams, EvaluateResult, void>('evaluate');
@@ -52,8 +51,12 @@ export function openConnection(ctxt: vscode.ExtensionContext) {
     context.subscriptions.push(output);
 }
 
-export async function calculate(expression: string): Promise<EvaluateResult> {
+export async function calculate(
+    expression: string, external?: vscode.CancellationToken
+): Promise<EvaluateResult> {
     const source = new CancellationTokenSource();
+    const externalDisposable = external?.onCancellationRequested(() => source.cancel());
+
     const timer = setTimeout(() => {
         source.cancel();
         output.appendLine(`calculation of ${expression} cancelled by timeout`);
@@ -63,6 +66,7 @@ export async function calculate(expression: string): Promise<EvaluateResult> {
         return await getConnection().sendRequest(Evaluate, { expression }, source.token);
     } finally {
         clearTimeout(timer);
+        externalDisposable?.dispose();
         source.dispose();
     }
 }

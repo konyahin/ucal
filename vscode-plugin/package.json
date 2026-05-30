@@ -14,7 +14,9 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:markdown"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
@@ -44,6 +46,7 @@
     "package": "vsce package"
   },
   "devDependencies": {
+    "@types/markdown-it": "^14.1.2",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/vscode": "^1.120.0",
@@ -54,6 +57,7 @@
     "typescript-eslint": "^8.56.1"
   },
   "dependencies": {
+    "markdown-it": "^14.1.0",
     "vscode-jsonrpc": "^8.2.1"
   }
 }
