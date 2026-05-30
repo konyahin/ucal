@@ -5,3 +5,4 @@ benchmark.txt
 node_modules
 vscode-plugin/out
 *.vsix
+dist/

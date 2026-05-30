@@ -24,3 +24,23 @@ coverage-html:
 check:
     go vet
     staticcheck
+
+release version:
+    rm -rf dist
+    mkdir -p dist
+    just _build linux   amd64 ucal-{{version}}-linux-amd64       ""
+    just _build linux   arm64 ucal-{{version}}-linux-arm64       ""
+    just _build darwin  amd64 ucal-{{version}}-darwin-amd64      ""
+    just _build darwin  arm64 ucal-{{version}}-darwin-arm64      ""
+    just _build windows amd64 ucal-{{version}}-windows-amd64     .exe
+    just _package_vsix {{version}}
+    cd dist && shasum -a 256 * > SHA256SUMS
+    ls -lh dist
+
+_build os arch name ext:
+    GOOS={{os}} GOARCH={{arch}} go build -trimpath -ldflags="-s -w" -o dist/{{name}}{{ext}} .
+
+_package_vsix version:
+    cd vscode-plugin && npm ci
+    cd vscode-plugin && npm run compile
+    cd vscode-plugin && vsce package --no-update-package-json --out ../dist/ucal-{{version}}.vsix $(echo "{{version}}" | sed 's/^v//')
